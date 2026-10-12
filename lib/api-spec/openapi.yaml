@@ -2,14 +2,16 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: LOVELOCK social quiz platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: quizzes
+  - name: participants
+  - name: templates
 paths:
   /healthz:
     get:
@@ -24,7 +26,282 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me:
+    get:
+      operationId: getCurrentUser
+      tags: [quizzes]
+      summary: Get the current authenticated user
+      responses:
+        "200":
+          description: Current account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [quizzes]
+      summary: Get owner dashboard metrics and recent quizzes
+      responses:
+        "200":
+          description: Dashboard summary from saved quiz and attempt records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /quizzes:
+    get:
+      operationId: listMyQuizzes
+      tags: [quizzes]
+      summary: List quizzes owned by the current user
+      responses:
+        "200":
+          description: Owned quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quiz"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createQuiz
+      tags: [quizzes]
+      summary: Create a quiz owned by the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizInput"
+      responses:
+        "201":
+          description: Created quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /quizzes/{quizId}:
+    parameters:
+      - name: quizId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: getQuiz
+      tags: [quizzes]
+      summary: Get an owned quiz
+      responses:
+        "200":
+          description: Owned quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateQuiz
+      tags: [quizzes]
+      summary: Update an owned quiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizInput"
+      responses:
+        "200":
+          description: Updated quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteQuiz
+      tags: [quizzes]
+      summary: Delete an owned quiz and its attempts
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /quizzes/{quizId}/analytics:
+    get:
+      operationId: getQuizAnalytics
+      tags: [quizzes]
+      summary: Get owner-only analytics for a quiz
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAnalytics"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /quizzes/{quizId}/export:
+    get:
+      operationId: exportQuizResponses
+      tags: [quizzes]
+      summary: Export owner-only participant responses as CSV
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /explore:
+    get:
+      operationId: exploreQuizzes
+      tags: [quizzes]
+      summary: Search published public quizzes
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, popular]
+            default: newest
+      responses:
+        "200":
+          description: Public quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicQuizCard"
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List ready-to-use quiz templates
+      responses:
+        "200":
+          description: Template library
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizTemplate"
+  /public/quizzes/{publicId}:
+    get:
+      operationId: getPublicQuiz
+      tags: [participants]
+      summary: Load a published quiz by its unguessable public ID
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Participant-safe quiz data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicQuiz"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/quizzes/{publicId}/attempts:
+    post:
+      operationId: submitQuizAttempt
+      tags: [participants]
+      summary: Save participant answers and calculate server-side results
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptInput"
+      responses:
+        "201":
+          description: Saved attempt and result visibility information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +310,209 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    AnswerOption:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string }
+        scoreValue: { type: number }
+        isCorrect: { type: boolean }
+      required: [id, text]
+    QuizQuestion:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string }
+        type:
+          type: string
+          enum: [single-choice, multiple-choice, yes-no, short-answer, personality, score-based]
+        position: { type: integer }
+        noButtonMode:
+          type: string
+          enum: [normal, playful, escape, disabled]
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerOption"
+      required: [id, text, type, position, options]
+    QuizInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        category: { type: string, maxLength: 60 }
+        visibility:
+          type: string
+          enum: [public, unlisted, private]
+        status:
+          type: string
+          enum: [draft, published]
+        resultVisibility: { type: boolean }
+        allowRetake: { type: boolean }
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+      required: [title, description, category, visibility, status, resultVisibility, allowRetake, questions]
+    Quiz:
+      type: object
+      properties:
+        id: { type: integer }
+        publicId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        visibility:
+          type: string
+          enum: [public, unlisted, private]
+        status:
+          type: string
+          enum: [draft, published]
+        resultVisibility: { type: boolean }
+        allowRetake: { type: boolean }
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+        attempts: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, publicId, title, description, category, visibility, status, resultVisibility, allowRetake, questions, attempts, createdAt, updatedAt]
+    CurrentUser:
+      type: object
+      properties:
+        id: { type: string }
+      required: [id]
+    Dashboard:
+      type: object
+      properties:
+        totalQuizzes: { type: integer }
+        totalAttempts: { type: integer }
+        completedResponses: { type: integer }
+        averageScore: { type: ["number", "null"] }
+        recentQuizzes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Quiz"
+      required: [totalQuizzes, totalAttempts, completedResponses, averageScore, recentQuizzes]
+    PublicAnswerOption:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string }
+      required: [id, text]
+    PublicQuestion:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string }
+        type:
+          type: string
+          enum: [single-choice, multiple-choice, yes-no, short-answer, personality, score-based]
+        position: { type: integer }
+        noButtonMode:
+          type: string
+          enum: [normal, playful, escape, disabled]
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicAnswerOption"
+      required: [id, text, type, position, options]
+    PublicQuiz:
+      type: object
+      properties:
+        publicId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicQuestion"
+        allowRetake: { type: boolean }
+        resultVisibility: { type: boolean }
+      required: [publicId, title, description, category, questions, allowRetake, resultVisibility]
+    PublicQuizCard:
+      type: object
+      properties:
+        publicId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        attempts: { type: integer }
+      required: [publicId, title, description, category, attempts]
+    QuizTemplate:
+      type: object
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+      required: [slug, title, description, category, questions]
+    SubmittedAnswer:
+      type: object
+      properties:
+        questionId: { type: string }
+        selectedOptionIds:
+          type: array
+          items: { type: string }
+        shortAnswer: { type: string }
+      required: [questionId, selectedOptionIds]
+    AttemptInput:
+      type: object
+      properties:
+        nickname: { type: string, maxLength: 40 }
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubmittedAnswer"
+      required: [answers]
+    AttemptResult:
+      type: object
+      properties:
+        id: { type: integer }
+        scorePercent: { type: ["number", "null"] }
+        correctCount: { type: integer }
+        scoredCount: { type: integer }
+        resultVisible: { type: boolean }
+        message: { type: string }
+      required: [id, scorePercent, correctCount, scoredCount, resultVisible, message]
+    AnalyticsAnswer:
+      type: object
+      properties:
+        optionText: { type: string }
+        count: { type: integer }
+      required: [optionText, count]
+    AnalyticsQuestion:
+      type: object
+      properties:
+        questionText: { type: string }
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsAnswer"
+      required: [questionText, answers]
+    QuizAnalytics:
+      type: object
+      properties:
+        views: { type: integer }
+        attempts: { type: integer }
+        completed: { type: integer }
+        completionRate: { type: number }
+        averageScore: { type: ["number", "null"] }
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsQuestion"
+      required: [views, attempts, completed, completionRate, averageScore, questions]
 

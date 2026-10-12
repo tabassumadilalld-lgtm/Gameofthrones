@@ -1,0 +1,801 @@
+LOVELOCK — Full-Stack Social Quiz Platform
+
+Act as a senior full-stack developer, UI/UX designer, database architect, and security engineer. Build a complete, production-quality social quiz platform named LOVELOCK.
+
+Do not create just a landing page or a static UI demo. Build a fully functional application with a working frontend, backend, database, authentication, quiz creation, shareable links, answer submission, scoring, analytics, and user-specific dashboards.
+
+1. IMPORTANT REPLIT WORKFLOW
+
+Before writing code:
+
+1. Inspect the existing project and understand its framework, folder structure, dependencies, routes, and database setup.
+2. If a project already exists, improve it without unnecessarily deleting or rewriting working code.
+3. Reuse suitable existing dependencies.
+4. Identify incomplete or broken features.
+5. Implement features in small, logical stages.
+6. Run the application and resolve errors before considering the work complete.
+7. Never replace working functionality with placeholder buttons, fake statistics, or hardcoded demo data.
+
+Make actual changes to the project files. Do not merely explain what code should be written.
+
+If the project is too large to complete in one pass, prioritize the core working application and continue in stages.
+
+2. TECHNOLOGY STACK
+
+Use the following stack where compatible with the existing project:
+
+Frontend
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Framer Motion
+- Lucide React icons
+- Recharts for analytics
+
+Backend
+
+- Node.js
+- Express
+- TypeScript
+
+Database
+
+- PostgreSQL
+- Drizzle ORM
+
+Authentication and security
+
+- Secure server-side authentication
+- Proper password hashing
+- HTTP-only session cookies
+- Server-side authorization
+- Input validation
+- Rate limiting
+- Secure environment variables
+
+If an equivalent stack is already configured and working, preserve it unless there is a strong reason to change it.
+
+3. BRAND IDENTITY AND DESIGN
+
+Brand name: LOVELOCK
+
+Tagline: "Every answer tells a story."
+
+Create a premium, modern, polished social quiz experience.
+
+Visual direction
+
+- Clean white background
+- Soft pink and violet accents
+- Subtle gradients
+- Large rounded cards
+- Elegant typography
+- Gentle shadows
+- Smooth page transitions
+- Refined hover effects
+- Animated buttons
+- Responsive layouts
+- Excellent mobile experience
+
+Avoid clutter, excessive gradients, unnecessary animations, and generic template styling.
+
+Create a consistent design system with reusable components, buttons, forms, modals, navigation, cards, loading states, and notifications.
+
+Support desktop, tablet, and mobile screens.
+
+Respect reduced-motion preferences and ensure animations do not prevent people from using the website.
+
+4. PUBLIC LANDING PAGE
+
+Build a complete landing page containing:
+
+Navigation
+
+- LOVELOCK logo
+- Explore
+- Create Quiz
+- Templates
+- Sign In
+- Get Started
+
+Hero section
+
+Headline:
+"How well do they really know you?"
+
+Supporting text:
+"Create fun quizzes, share them with your people, and discover what their answers reveal."
+
+Primary CTA: "Create Your Quiz"
+
+Secondary CTA: "Explore Quizzes"
+
+Add a polished animated visual preview of quiz cards and answer options.
+
+Additional sections
+
+- How It Works
+- Popular Quiz Categories
+- Featured Templates
+- Girlfriend Challenge
+- Friendship Challenges
+- Personality Quizzes
+- Frequently Asked Questions
+- Footer with Privacy Policy, Terms, Contact, and Report Abuse
+
+All navigation and CTA buttons must work.
+
+5. USER AUTHENTICATION
+
+Implement working registration, login, logout, and session management.
+
+Registration fields:
+
+- Username
+- Email
+- Password
+- Confirm password
+
+Requirements:
+
+- Validate inputs on the client and server.
+- Hash passwords securely.
+- Never store plaintext passwords.
+- Prevent duplicate accounts.
+- Protect authenticated routes.
+- Provide useful error messages.
+- Add loading states.
+- Do not expose passwords, session tokens, or private account data.
+
+Users must have separate accounts and private dashboards.
+
+One user must never be able to access another user's private quizzes or analytics by changing an ID in the URL.
+
+6. PERSONAL DASHBOARD
+
+After login, show a personalized dashboard.
+
+Include:
+
+- Welcome message
+- Total quizzes created
+- Total quiz attempts
+- Total completed responses
+- Average score, where applicable
+- Recent activity
+- Most popular quizzes
+- Quick-create button
+- Quiz management
+- Account settings
+
+Provide dashboard navigation:
+
+1. Overview
+2. My Quizzes
+3. Create Quiz
+4. Templates
+5. Analytics
+6. Settings
+
+All metrics must come from real database records, not invented numbers.
+
+Show a friendly empty state for new accounts.
+
+7. QUIZ CREATOR
+
+Build a fully functional quiz creation system.
+
+Users can:
+
+- Create a quiz from scratch
+- Select a template
+- Set a title and description
+- Upload or select a cover image
+- Add, edit, duplicate, reorder, and delete questions
+- Add multiple answer options
+- Mark correct answers when the quiz type requires them
+- Preview the quiz
+- Save as a draft
+- Publish and unpublish a quiz
+- Copy its shareable link
+- Edit an existing quiz
+- Delete their own quiz
+
+Supported question types
+
+- Single-choice
+- Multiple-choice
+- Yes/No
+- Short answer
+- Personality-style questions
+- Score-based questions
+
+Each question should support configurable options where appropriate.
+
+Validate that published quizzes contain the required information.
+
+Do not lose unsaved work when users accidentally click the wrong button. Add appropriate confirmation dialogs for destructive actions.
+
+8. THE MOVING "NO" BUTTON SYSTEM
+
+This is a signature LOVELOCK feature.
+
+Create a reusable component called "PlayfulNoButton" that can be used in quizzes and challenges.
+
+It must support these modes:
+
+NORMAL
+
+The button behaves normally.
+
+PLAYFUL
+
+When the user moves their pointer near the "No" button, it moves to a new safe position within the quiz card.
+
+On touch devices, tapping the button triggers a playful movement instead of immediately selecting it.
+
+ESCAPE MODE
+
+The button tries to evade the pointer or touch interaction by moving to a different safe position inside its container.
+
+Keep movement smooth and unpredictable without causing layout overflow.
+
+DISABLED
+
+The button remains visible but cannot be selected. Clearly communicate its disabled state.
+
+Configuration
+
+Quiz creators should be able to choose the button mode for individual questions.
+
+For the default Girlfriend Challenge, use PLAYFUL mode for questions with a "No" option.
+
+Technical requirements
+
+- Keep the button within its parent container.
+- Never allow it to cover important text or other answer options.
+- Avoid placing it outside the visible screen.
+- Prevent horizontal page overflow.
+- Make sure other answer options remain clickable.
+- Avoid infinite animation loops that waste resources.
+- Respect reduced-motion settings.
+- Provide keyboard accessibility and an accessible alternative interaction.
+- Ensure the experience remains usable on phones and tablets.
+- Store the actual answer selected by the participant.
+- Do not automatically convert an unanswered question into "Yes."
+- Never silently submit an answer without the participant's action.
+
+On touch devices, a tap on the playful button may make it move. Provide a clear accessible way to complete the quiz without making the interaction impossible.
+
+9. DEFAULT GIRLFRIEND CHALLENGE
+
+Create a ready-to-use template named:
+
+Girlfriend Challenge 💗
+
+Description:
+"Let's see how well you know me!"
+
+Include the following questions and answer options.
+
+Question 1
+
+"Do you like me?"
+
+Options:
+
+- No
+- Yes
+
+Question 2
+
+"Are you sure about your previous answer?"
+
+Options:
+
+- No
+- YES
+- YES, I'M SURE
+
+Question 3
+
+"How much do you like me?"
+
+Options:
+
+- No
+- A little
+- A lot
+- More than words can explain
+- Classified information
+
+Question 4
+
+"What's your favourite thing about me?"
+
+Options:
+
+- No
+- Personality
+- Humour
+- How I treat people
+- Everything
+
+Question 5
+
+"If we could spend a day together, what would you choose?"
+
+Options:
+
+- No
+- Watch a movie
+- Go on a food adventure
+- Play games
+- Talk for hours
+
+Question 6
+
+"What's our ideal vibe?"
+
+Options:
+
+- No
+- Chaotic besties
+- Cute and wholesome
+- Harmless mischief
+- Unstoppable duo
+
+Question 7
+
+"Would you make more memories with me?"
+
+Options:
+
+- No
+- Obviously
+- Of course
+- Is that even a question?
+
+Challenge behavior
+
+- Apply PLAYFUL mode to the "No" option by default.
+- Make the movement smooth, funny, and visually polished.
+- Keep the other options normally selectable.
+- Let quiz creators edit the questions and options.
+- Let creators turn the playful behavior off.
+- Save all actual participant answers.
+- Show results after submission.
+
+The moving button is a playful interaction, not a security restriction. Participants must still have an accessible way to answer honestly.
+
+10. UNIQUE SHAREABLE QUIZ LINKS
+
+Every published quiz must receive a unique, unguessable public identifier.
+
+Example route:
+
+"/q/AbC123xyz"
+
+Requirements:
+
+- Generate identifiers securely on the server.
+- Do not expose sequential database IDs as public quiz identifiers.
+- Provide a working Copy Link button.
+- Provide native sharing on supported devices.
+- Include a QR code option if practical.
+- Allow creators to publish, unpublish, and delete their quizzes.
+
+Visibility settings
+
+- Public
+- Unlisted
+- Private
+- Draft
+
+Explain the difference between these settings in the interface.
+
+An unlisted quiz should be accessible through its shareable link but should not automatically appear in public discovery.
+
+Private quizzes must require appropriate authorization.
+
+Drafts must not be publicly accessible.
+
+11. PARTICIPANT EXPERIENCE
+
+People opening a shared quiz link should see a polished, mobile-friendly quiz page.
+
+The page must include:
+
+- Quiz cover
+- Quiz title and description
+- Creator display name, when appropriate
+- Progress indicator
+- Current question
+- Answer options
+- Previous and Next buttons where appropriate
+- Submit button
+- Loading states
+- Validation messages
+
+Allow participants to answer without creating an account unless a quiz's explicitly configured privacy settings require authentication.
+
+Ask for a nickname only when appropriate. Do not require unnecessary personal information.
+
+Participants must be able to:
+
+- Select answers
+- Change answers before submission
+- Navigate questions
+- Submit their responses
+- See a completion screen
+- View results when the creator allows it
+
+Prevent accidental duplicate submissions where appropriate.
+
+Do not expose correct answers, private creator data, or hidden scoring rules before submission.
+
+12. RESULTS AND SCORING
+
+After submission, calculate results on the server.
+
+Support:
+
+- Percentage scores for knowledge quizzes
+- Personality-style outcomes
+- Custom result messages
+- Correct and incorrect answer counts
+- Optional creator-defined scoring rules
+
+Do not apply right-or-wrong scoring to personality questions unless the creator explicitly configures it.
+
+Create an attractive result screen with:
+
+- Score or result category
+- Personalized feedback
+- Quiz title
+- Retake button, if permitted
+- Share result button, if enabled
+
+The creator should be able to decide whether participants can view their results.
+
+13. QUIZ ANALYTICS
+
+Every quiz owner should have an analytics page for their own quizzes.
+
+Display:
+
+- Total views, where accurately trackable
+- Total attempts
+- Completed submissions
+- Completion rate
+- Average score for scored quizzes
+- Recent submissions
+- Question-level answer distribution
+- Popular answer options
+
+Use Recharts for clear, responsive charts.
+
+All analytics must use actual database data.
+
+Do not display personal information from other users' private accounts.
+
+Allow creators to export their quiz response data as CSV.
+
+Protect exported data with server-side ownership checks.
+
+14. TEMPLATE LIBRARY
+
+Create a template gallery with categories such as:
+
+- Girlfriend Challenge
+- Boyfriend Challenge
+- Best Friend Quiz
+- Friendship Test
+- Couple Quiz
+- Who Knows Me Best?
+- Personality Quiz
+- Fun Challenge
+- Family Quiz
+
+Each template card should have:
+
+- Cover visual
+- Title
+- Description
+- Category
+- Preview button
+- Use Template button
+
+Selecting a template should open the quiz creator with the questions prefilled.
+
+Templates should be stored and managed consistently, rather than implemented as disconnected static cards.
+
+15. EXPLORE PAGE
+
+Build a discovery page for publicly published quizzes.
+
+Include:
+
+- Search
+- Category filters
+- Sort by popularity or newest
+- Responsive quiz cards
+- Pagination or load-more functionality
+
+Only show quizzes that are explicitly public and published.
+
+Do not expose private or unlisted quizzes through public search results.
+
+Do not fake popularity counts.
+
+16. DATABASE STRUCTURE
+
+Use PostgreSQL with Drizzle ORM.
+
+Create suitable tables for:
+
+users
+
+- id
+- username
+- email
+- passwordHash
+- createdAt
+- updatedAt
+
+quizzes
+
+- id
+- ownerId
+- publicId
+- title
+- description
+- coverImage
+- category
+- visibility
+- status
+- settings
+- createdAt
+- updatedAt
+
+questions
+
+- id
+- quizId
+- text
+- type
+- position
+- settings
+
+answer_options
+
+- id
+- questionId
+- text
+- position
+- scoreValue
+- isCorrect, where appropriate
+
+quiz_attempts
+
+- id
+- quizId
+- participantNickname
+- score
+- resultType
+- startedAt
+- submittedAt
+
+submitted_answers
+
+- id
+- attemptId
+- questionId
+- selectedOptionIds or validated answer data
+
+reports
+
+- id
+- quizId
+- reporterDetails where appropriate
+- reason
+- status
+- createdAt
+
+Adapt the schema where needed to support the actual implementation.
+
+Add proper foreign keys, indexes, constraints, and deletion behavior.
+
+Never store all quiz data in frontend state as the only source of truth.
+
+Never rely on localStorage alone for accounts, quiz ownership, or submitted results.
+
+17. SECURITY AND PRIVACY
+
+Implement:
+
+- Server-side authorization on every protected operation
+- Password hashing
+- Secure session handling
+- Request validation
+- Rate limiting on login and public submissions
+- Protection against SQL injection
+- Safe rendering of user-generated content
+- File-upload restrictions if uploads are supported
+- Appropriate security headers
+- Generic authentication errors where appropriate
+- Ownership checks for editing, deleting, analytics, and exports
+- Environment variables for secrets
+- Safe error handling without leaking credentials or stack traces to visitors
+
+Do not place database credentials, session secrets, API keys, or private configuration in frontend code.
+
+Do not claim the application is completely secure without testing it.
+
+18. SETTINGS
+
+Create a settings page with:
+
+- Profile editing
+- Username editing with uniqueness validation
+- Password change
+- Account logout
+- Account deletion with confirmation
+- Quiz privacy defaults
+- Result visibility preferences
+
+Deleting an account should handle its associated data consistently and transparently.
+
+19. LOADING, ERRORS, AND EMPTY STATES
+
+Every major feature must have:
+
+- Loading indicators
+- Useful error messages
+- Empty states
+- Success notifications
+- Disabled states when appropriate
+- Form validation
+- Confirmation dialogs for destructive actions
+
+No dead buttons.
+
+No forms that appear to work but never save data.
+
+No fake loading animations that conceal failed backend requests.
+
+20. ACCESSIBILITY
+
+Implement:
+
+- Semantic HTML
+- Keyboard navigation
+- Visible focus indicators
+- Accessible form labels
+- Appropriate ARIA attributes
+- Good text contrast
+- Screen-reader-friendly notifications
+- Reduced-motion support
+
+The playful button must not make the quiz impossible for keyboard or assistive-technology users.
+
+21. REPLIT CONFIGURATION AND DEPLOYMENT
+
+Configure the application to run correctly in Replit.
+
+Requirements:
+
+- Use the appropriate run command.
+- Configure the frontend and backend correctly.
+- Use Replit's supported environment variables and secrets.
+- Connect PostgreSQL through environment-based configuration.
+- Include database migration instructions.
+- Ensure the server listens on the required host and port.
+- Avoid hardcoded production credentials.
+- Provide a clear setup guide in README.md.
+
+Create or update scripts for development, production builds, database migrations, and tests as appropriate.
+
+Do not assume that deployment is complete simply because the development preview works.
+
+22. TESTING
+
+Test the critical user flows.
+
+At minimum, verify:
+
+1. A new user can register.
+2. The user can log in and log out.
+3. A user can create a quiz.
+4. The quiz is saved to PostgreSQL.
+5. The quiz receives a unique public link.
+6. Another person can open that link.
+7. The participant can answer and submit the quiz.
+8. Submitted answers are saved correctly.
+9. The creator can view the results.
+10. Analytics reflect actual submissions.
+11. The moving "No" button stays within its container.
+12. Other answer buttons remain usable.
+13. The layout works on mobile.
+14. Unpublished quizzes are inaccessible publicly.
+15. Private quizzes cannot be accessed by unauthorized users.
+16. Users cannot edit or delete quizzes belonging to other users.
+17. Forms handle invalid input.
+18. The app builds without errors.
+
+Fix problems discovered during testing.
+
+23. IMPLEMENTATION ORDER
+
+Build the project in the following order.
+
+Phase 1: Foundation
+
+- Inspect the existing project
+- Configure the application
+- Build the design system
+- Configure the database
+- Implement authentication
+
+Phase 2: Core quiz functionality
+
+- User dashboard
+- Quiz creation and editing
+- Questions and answer options
+- Database persistence
+- Publishing and unique shareable links
+
+Phase 3: Participant functionality
+
+- Public quiz pages
+- Answer submission
+- Server-side scoring
+- Result pages
+
+Phase 4: Signature features
+
+- Girlfriend Challenge template
+- PlayfulNoButton component
+- Configurable button behavior
+- Mobile and accessibility support
+
+Phase 5: Management and analytics
+
+- Quiz management
+- Analytics dashboard
+- Response exports
+- Template library
+- Explore page
+
+Phase 6: Final polish
+
+- Settings
+- Privacy controls
+- Error handling
+- Security checks
+- Responsive design
+- Tests
+- Production build
+- README and deployment instructions
+
+24. FINAL ACCEPTANCE CRITERIA
+
+The project is not complete until:
+
+- The website looks premium and works on mobile.
+- Registration and login work.
+- Each account has its own dashboard.
+- Users can create and manage quizzes.
+- Quizzes persist in PostgreSQL.
+- Published quizzes have unique shareable links.
+- Participants can submit real answers.
+- Results and analytics reflect actual submissions.
+- The Girlfriend Challenge is functional.
+- The "No" button moves playfully while remaining accessible.
+- All important buttons and forms work.
+- Privacy and ownership checks are enforced by the backend.
+- The application builds and runs without critical errors.
+
+Start by inspecting the existing Replit project. Then implement Phase 1 and continue through the phases, preserving working code. Do not stop after generating a plan or creating a beautiful frontend. Build the actual application, run it, test it, fix errors, and report what works and what remains incomplete.
