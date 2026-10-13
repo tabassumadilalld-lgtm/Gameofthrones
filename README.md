@@ -51,4 +51,4 @@ The API expects the same database schema in each environment. The Vercel configu
 - Playful “No” option configuration in the quiz question model
 - An expiring HTTP-only browser token enforces the no-retake setting without collecting a participant account; clearing browser cookies resets that limit
 
-Quiz files currently use text and question data; image uploads, profile editing, account deletion, abuse reports, and expanded template management are not included in this first build.
+Quiz content currently uses text and question data. Image uploads, email changes, account deletion, abuse reports, and expanded template management are not included in this first build; display-name updates are available in account settings.

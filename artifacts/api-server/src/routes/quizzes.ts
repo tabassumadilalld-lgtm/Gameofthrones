@@ -83,8 +83,8 @@ function randomPublicId(): string {
 }
 
 function participantKeyFor(
-  req: express.Request,
-  res: express.Response,
+  req: Request,
+  res: Response,
   quizId: number,
 ): string {
   const existing = req.cookies?.lovelock_participant;
