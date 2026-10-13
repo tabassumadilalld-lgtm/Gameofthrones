@@ -31,6 +31,27 @@ const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const stripBase = (path: string) => basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
 if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
 
+async function copyText(value: string) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+  } catch {
+    // Try the selection-based fallback below for browsers that deny clipboard access.
+  }
+  const field = document.createElement('textarea');
+  field.value = value;
+  field.setAttribute('readonly', '');
+  field.style.position = 'fixed';
+  field.style.opacity = '0';
+  document.body.appendChild(field);
+  field.select();
+  const copied = document.execCommand('copy');
+  field.remove();
+  if (!copied) throw new Error('Clipboard access is unavailable.');
+}
+
 const appearance = {
   theme: shadcn,
   cssLayerName: 'clerk',
@@ -234,19 +255,23 @@ function Metric({ label, value, icon }: { label: string; value: number | string;
 }
 
 function QuizRow({ quiz }: { quiz: Quiz }) {
-  const [, setLocation] = useLocation();
   const client = useQueryClient();
   const remove = useDeleteQuiz();
-  const [copied, setCopied] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState('');
   const copyLink = async () => {
-    try { await navigator.clipboard.writeText(`${window.location.origin}${basePath}/q/${quiz.publicId}`); setCopied(true); setTimeout(() => setCopied(false), 1800); }
-    catch { setCopied(false); }
+    if (quiz.status !== 'published') return;
+    try {
+      await copyText(`${window.location.origin}${basePath}/q/${quiz.publicId}`);
+      setShareFeedback('Quiz link copied — send it to your people.');
+    } catch {
+      setShareFeedback('Couldn’t copy the link. Open the quiz and copy it there.');
+    }
   };
   return <article className="quiz-row">
     <div className="quiz-monogram"><Heart size={19} /></div><div className="quiz-row-main"><Link href={`/quizzes/${quiz.id}`} className="quiz-row-title">{quiz.title || 'Untitled quiz'}</Link><div className="quiz-row-meta"><span>{quiz.category || 'Uncategorized'}</span><span className="meta-dot" />{quiz.questions.length} questions<span className="meta-dot" /><span className={`status-tag ${quiz.status}`}>{quiz.status}</span>{remove.isError && <span className="delete-error" role="alert">Couldn’t delete — try again</span>}</div></div>
     <div className="quiz-row-stats"><strong>{quiz.attempts}</strong><span>answers</span></div>
-    <div className="quiz-row-actions"><button className="icon-button" aria-label="Copy quiz link" onClick={copyLink} data-testid={`button-copy-quiz-${quiz.id}`}>{copied ? <Check size={17} /> : <Copy size={17} />}</button><Link className="icon-button" href={`/quizzes/${quiz.id}/analytics`} aria-label="Open analytics"><BarChart3 size={17} /></Link><button className="icon-button danger-icon" aria-label={`Delete ${quiz.title}`} onClick={() => { if (window.confirm(`Delete “${quiz.title || 'Untitled quiz'}” and its answers?`)) remove.mutate({ quizId: quiz.id }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); } }); }} disabled={remove.isPending} data-testid={`button-delete-quiz-${quiz.id}`}><Trash2 size={17} /></button><Link className="icon-button row-go" href={`/quizzes/${quiz.id}`} aria-label={`Edit ${quiz.title}`}><ArrowRight size={18} /></Link></div>
-    {copied && <span className="copy-pop" role="status">Link copied</span>}
+    <div className="quiz-row-actions">{quiz.status === 'published' ? <button className="quiz-share-button" aria-label="Copy participant quiz link" onClick={copyLink} data-testid={`button-copy-quiz-${quiz.id}`}><Link2 size={15} /><span>Share</span></button> : <span className="share-placeholder" title="Publish this quiz before sharing">Publish to share</span>}<Link className="icon-button" href={`/quizzes/${quiz.id}/analytics`} aria-label="Open analytics"><BarChart3 size={17} /></Link><button className="icon-button danger-icon" aria-label={`Delete ${quiz.title}`} onClick={() => { if (window.confirm(`Delete “${quiz.title || 'Untitled quiz'}” and its answers?`)) remove.mutate({ quizId: quiz.id }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); } }); }} disabled={remove.isPending} data-testid={`button-delete-quiz-${quiz.id}`}><Trash2 size={17} /></button><Link className="icon-button row-go" href={`/quizzes/${quiz.id}`} aria-label={`Edit ${quiz.title}`}><ArrowRight size={18} /></Link></div>
+    {shareFeedback && <span className="share-feedback" role="status" data-testid={`status-share-quiz-${quiz.id}`}>{shareFeedback}</span>}
   </article>;
 }
 
@@ -264,6 +289,7 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
   const [form, setForm] = useState<QuizInput>(initialQuiz);
   const [initialized, setInitialized] = useState(false);
   const [notice, setNotice] = useState('');
+  const [shareFeedback, setShareFeedback] = useState('');
   useEffect(() => {
     if (editing && existing.data && !initialized) {
       const { title, description, category, visibility, status, resultVisibility, allowRetake, questions } = existing.data;
@@ -283,11 +309,29 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
     else create.mutate({ data: prepared }, { onSuccess: done, onError: () => setNotice('That quiz didn’t save. Please try again.') });
   };
   const pending = create.isPending || update.isPending;
+  const publishedQuiz = editing && existing.data?.status === 'published' ? existing.data : null;
+  const shareUrl = publishedQuiz ? `${window.location.origin}${basePath}/q/${publishedQuiz.publicId}` : '';
+  const hasScoredQuestions = form.questions.some((question) => question.options.some((option) => option.isCorrect || (typeof option.scoreValue === 'number' && option.scoreValue > 0)));
+  const copyPublishedLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await copyText(shareUrl);
+      setShareFeedback('Link copied — people can take the quiz and see their own result after submitting.');
+    } catch {
+      setShareFeedback('Couldn’t copy automatically. Select the link and copy it manually.');
+    }
+  };
   if (editing && existing.isLoading) return <AppFrame><LoadingState label="Finding your quiz…" /></AppFrame>;
   if (editing && existing.isError) return <AppFrame><ErrorState label="We couldn’t open this quiz." retry={() => existing.refetch()} /></AppFrame>;
   return <AppFrame><div className="editor-wrap">
     <Link href={editing ? '/dashboard' : '/templates'} className="back-link"><ArrowLeft size={15} /> {editing ? 'All quizzes' : 'Browse templates'}</Link>
     <div className="editor-heading"><div><div className="section-kicker">{editing ? 'Make it yours' : 'A story in the making'}</div><h1 className="page-title">{editing ? 'Edit your quiz' : 'Start with a question.'}</h1><p className="page-subtitle">The best ones sound like you. The rest can come later.</p></div><span className="draft-pill"><span /> {form.status}</span></div>
+    {editing && (publishedQuiz ? <section className="share-panel" aria-labelledby="share-panel-title">
+      <div className="share-panel-copy"><span className="section-kicker">Ready for your people</span><h2 id="share-panel-title">Share your quiz link</h2><p>Send this link to friends. They answer here and see their own score after they submit.</p></div>
+      <div className="share-link-row"><input aria-label="Participant quiz link" data-testid={`input-share-url-${publishedQuiz.id}`} value={shareUrl} readOnly onFocus={(event) => event.currentTarget.select()} /><Button variant="outline" onClick={copyPublishedLink} data-testid={`button-share-quiz-${publishedQuiz.id}`}><Copy size={15} /> Copy link</Button><a className="button button-primary share-open-button" href={`${basePath}/q/${publishedQuiz.publicId}`} target="_blank" rel="noreferrer" data-testid={`link-preview-quiz-${publishedQuiz.id}`}>Open link <ArrowUpRight size={15} /></a></div>
+      <p className={`share-score-note ${!form.resultVisibility || !hasScoredQuestions ? 'share-score-warning' : ''}`} role="status" data-testid={`status-score-sharing-${publishedQuiz.id}`}>{!form.resultVisibility ? 'Scores are hidden right now. Turn on “Show results after answering” below to let people see their score.' : !hasScoredQuestions ? 'A numeric score is not set up yet. Mark a correct answer or add positive point values in your questions.' : 'Scores are enabled. Each person sees their own score immediately after submitting.'}</p>
+      {shareFeedback && <p className="share-feedback-inline" role="status" data-testid={`status-share-link-${publishedQuiz.id}`}>{shareFeedback}</p>}
+    </section> : <section className="share-panel share-panel-draft" aria-labelledby="share-panel-title"><div className="share-panel-copy"><span className="section-kicker">One more step</span><h2 id="share-panel-title">Publish to get a share link</h2><p>Once this quiz is published, you can copy a participant link here. People use it to answer the quiz and see their own score.</p></div></section>)}
     <div className="editor-layout"><section className="editor-main">
       <div className="form-panel"><div className="panel-heading"><span className="panel-index">01</span><div><h2>The introduction</h2><p>Give your quiz a name your people will remember.</p></div></div>
         <label className="field-label">Quiz title<input value={form.title} maxLength={120} placeholder="How well do you know me?" onChange={(e) => updateField('title', e.target.value)} data-testid="input-quiz-title" /></label>
