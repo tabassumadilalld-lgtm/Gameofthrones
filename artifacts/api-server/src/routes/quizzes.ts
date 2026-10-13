@@ -512,6 +512,14 @@ router.get("/quizzes/:quizId/analytics", async (req, res): Promise<void> => {
               ).toFixed(1),
             ),
       questions: questionAnalytics,
+      submissions: attempts.map((attempt) => ({
+        id: attempt.id,
+        participantName: attempt.participantNickname,
+        scorePercent: attempt.scorePercent,
+        correctCount: attempt.correctCount,
+        scoredCount: attempt.scoredCount,
+        submittedAt: attempt.submittedAt.toISOString(),
+      })),
     }),
   );
 });
@@ -736,6 +744,11 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+    const participantName = parsed.data.nickname.trim();
+    if (!participantName) {
+      res.status(400).json({ error: "Enter your name so it can appear next to your score." });
+      return;
+    }
     const [quiz] = await db
       .select()
       .from(quizzesTable)
@@ -874,7 +887,7 @@ router.post(
       .insert(quizAttemptsTable)
       .values({
         quizId: quiz.id,
-        participantNickname: parsed.data.nickname?.trim() || null,
+        participantNickname: participantName,
         participantToken,
         answers: validAnswers,
         scorePercent,

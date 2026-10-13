@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AnalyticsQuestion } from './analyticsQuestion';
+import type { QuizSubmissionSummary } from './quizSubmissionSummary';
 
 export interface QuizAnalytics {
   views: number;
@@ -15,4 +16,5 @@ export interface QuizAnalytics {
   /** @nullable */
   averageScore: number | null;
   questions: AnalyticsQuestion[];
+  submissions: QuizSubmissionSummary[];
 }

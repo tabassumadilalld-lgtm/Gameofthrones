@@ -25,7 +25,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 20_000, retry: 1 } } });
-let nextPublishedQuizId: number | null = null;
+let nextPublishedQuiz: Quiz | null = null;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -271,7 +271,7 @@ function QuizRow({ quiz }: { quiz: Quiz }) {
   return <article className="quiz-row">
     <div className="quiz-monogram"><Heart size={19} /></div><div className="quiz-row-main"><Link href={`/quizzes/${quiz.id}`} className="quiz-row-title">{quiz.title || 'Untitled quiz'}</Link><div className="quiz-row-meta"><span>{quiz.category || 'Uncategorized'}</span><span className="meta-dot" />{quiz.questions.length} questions<span className="meta-dot" /><span className={`status-tag ${quiz.status}`}>{quiz.status}</span>{remove.isError && <span className="delete-error" role="alert">Couldn’t delete — try again</span>}</div></div>
     <div className="quiz-row-stats"><strong>{quiz.attempts}</strong><span>answers</span></div>
-    <div className="quiz-row-actions">{quiz.status === 'published' ? <button className="quiz-share-button" aria-label="Copy participant quiz link" onClick={copyLink} data-testid={`button-copy-quiz-${quiz.id}`}><Link2 size={15} /><span>Share</span></button> : <span className="share-placeholder" title="Publish this quiz before sharing">Publish to share</span>}<Link className="icon-button" href={`/quizzes/${quiz.id}/analytics`} aria-label="Open analytics"><BarChart3 size={17} /></Link><button className="icon-button danger-icon" aria-label={`Delete ${quiz.title}`} onClick={() => { if (window.confirm(`Delete “${quiz.title || 'Untitled quiz'}” and its answers?`)) remove.mutate({ quizId: quiz.id }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); } }); }} disabled={remove.isPending} data-testid={`button-delete-quiz-${quiz.id}`}><Trash2 size={17} /></button><Link className="icon-button row-go" href={`/quizzes/${quiz.id}`} aria-label={`Edit ${quiz.title}`}><ArrowRight size={18} /></Link></div>
+    <div className="quiz-row-actions">{quiz.status === 'published' ? <button className="quiz-share-button" aria-label="Copy participant quiz link" onClick={copyLink} data-testid={`button-copy-quiz-${quiz.id}`}><Link2 size={15} /><span>Share</span></button> : <span className="share-placeholder" title="Publish this quiz before sharing">Publish to share</span>}<Link className="quiz-scores-button" href={`/quizzes/${quiz.id}/analytics`} aria-label="View names and scores" data-testid={`link-quiz-scores-${quiz.id}`}><BarChart3 size={16} /><span>Scores</span></Link><button className="icon-button danger-icon" aria-label={`Delete ${quiz.title}`} onClick={() => { if (window.confirm(`Delete “${quiz.title || 'Untitled quiz'}” and its answers?`)) remove.mutate({ quizId: quiz.id }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); } }); }} disabled={remove.isPending} data-testid={`button-delete-quiz-${quiz.id}`}><Trash2 size={17} /></button><Link className="icon-button row-go" href={`/quizzes/${quiz.id}`} aria-label={`Edit ${quiz.title}`}><ArrowRight size={18} /></Link></div>
     {shareFeedback && <span className="share-feedback" role="status" data-testid={`status-share-quiz-${quiz.id}`}>{shareFeedback}</span>}
   </article>;
 }
@@ -292,6 +292,7 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
   const [notice, setNotice] = useState('');
   const [shareFeedback, setShareFeedback] = useState('');
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [publishedQuizOverride, setPublishedQuizOverride] = useState<Quiz | null>(null);
   useEffect(() => {
     if (editing && existing.data && !initialized) {
       const { title, description, category, visibility, status, resultVisibility, allowRetake, questions } = existing.data;
@@ -300,11 +301,12 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
     }
   }, [editing, existing.data, initialized]);
   useEffect(() => {
-    if (editing && existing.data && nextPublishedQuizId === existing.data.id) {
+    if (editing && nextPublishedQuiz && nextPublishedQuiz.id === quizId) {
+      setPublishedQuizOverride(nextPublishedQuiz);
       setPublishSuccess(true);
-      nextPublishedQuizId = null;
+      nextPublishedQuiz = null;
     }
-  }, [editing, existing.data]);
+  }, [editing, quizId]);
 
   const updateField = <K extends keyof QuizInput>(key: K, value: QuizInput[K]) => setForm((f) => ({ ...f, [key]: value }));
   const updateQuestion = (index: number, patch: Partial<QuizQuestion>) => setForm((f) => ({ ...f, questions: f.questions.map((q, i) => i === index ? { ...q, ...patch } : q) }));
@@ -312,12 +314,33 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
     const prepared: QuizInput = { ...form, title: form.title.trim(), description: form.description.trim(), status: publish ? 'published' : 'draft', questions: form.questions.map((q, i) => ({ ...q, position: i, text: q.text.trim(), options: q.options.map((o) => ({ ...o, text: o.text.trim() })) })) };
     if (!prepared.title) { setNotice('Give your quiz a title before saving.'); return; }
     if (prepared.questions.some((q) => !q.text || (q.type !== 'short-answer' && q.options.some((o) => !o.text)))) { setNotice('Finish each question and its answers before saving.'); return; }
-    const done = (quiz: Quiz) => { if (prepared.status === 'published') { if (editing) setPublishSuccess(true); else nextPublishedQuizId = quiz.id; } client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); if (editing) { client.invalidateQueries({ queryKey: getGetQuizQueryKey(quiz.id) }); client.invalidateQueries({ queryKey: getGetQuizAnalyticsQueryKey(quiz.id) }); } setLocation(`/quizzes/${quiz.id}`); };
+    const done = (quiz: Quiz) => {
+      if (prepared.status === 'published') {
+        if (editing) {
+          setPublishedQuizOverride(quiz);
+          setPublishSuccess(true);
+        } else {
+          nextPublishedQuiz = quiz;
+        }
+      } else {
+        setPublishedQuizOverride(null);
+        setPublishSuccess(false);
+      }
+      client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() });
+      client.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
+      if (editing) {
+        client.invalidateQueries({ queryKey: getGetQuizAnalyticsQueryKey(quiz.id) });
+      }
+      client.setQueryData(getGetQuizQueryKey(quiz.id), quiz);
+      setLocation(`/quizzes/${quiz.id}`);
+    };
     if (editing) update.mutate({ quizId, data: prepared }, { onSuccess: done, onError: () => setNotice('That change didn’t save. Please try again.') });
     else create.mutate({ data: prepared }, { onSuccess: done, onError: () => setNotice('That quiz didn’t save. Please try again.') });
   };
   const pending = create.isPending || update.isPending;
-  const publishedQuiz = editing && existing.data?.status === 'published' ? existing.data : null;
+  const publishedQuiz = editing
+    ? publishedQuizOverride ?? (existing.data?.status === 'published' ? existing.data : null)
+    : null;
   const shareUrl = publishedQuiz ? `${window.location.origin}${basePath}/q/${publishedQuiz.publicId}` : '';
   const hasScoredQuestions = form.questions.some((question) => question.options.some((option) => option.isCorrect || (typeof option.scoreValue === 'number' && option.scoreValue > 0)));
   const copyPublishedLink = async () => {
@@ -397,6 +420,17 @@ function AnalyticsPage() {
     {exportError && <div className="inline-notice" role="alert">{exportError}</div>}
     {analytics.isLoading ? <LoadingState label="Gathering the answers…" /> : analytics.isError ? <ErrorState label="We couldn’t load your analytics." retry={() => analytics.refetch()} /> : analytics.data && <>
       <section className="analytics-summary"><Metric label="Quiz views" value={analytics.data.views} icon={<Eye size={19} />} /><Metric label="Answers shared" value={analytics.data.attempts} icon={<Users size={19} />} /><Metric label="Finished" value={analytics.data.completed} icon={<CheckCircle2 size={19} />} /><Metric label="Completion rate" value={`${analytics.data.completionRate}%`} icon={<BarChart3 size={19} />} /></section>
+      <section className="participant-score-panel" aria-labelledby="participant-score-title">
+        <div className="section-row"><div><span className="section-kicker">Your respondents</span><h2 className="section-title" id="participant-score-title">People and their scores</h2></div><span className="response-private"><LockKeyhole size={14} /> Owner view</span></div>
+        {analytics.data.submissions.length ? <div className="participant-score-list">{analytics.data.submissions.map((submission) => {
+          const displayName = submission.participantName?.trim() || 'Anonymous';
+          return <article className="participant-score-row" key={submission.id} data-testid={`row-participant-score-${submission.id}`}>
+            <span className="participant-score-avatar" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
+            <span className="participant-score-person"><strong>{displayName}</strong><small>Submitted {new Date(submission.submittedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small></span>
+            <span className="participant-score-result"><strong>{submission.scorePercent === null ? 'Unscored' : `${submission.scorePercent}%`}</strong><small>{submission.scoredCount ? `${submission.correctCount} of ${submission.scoredCount} scored questions` : 'No scored questions'}</small></span>
+          </article>;
+        })}</div> : <p className="participant-score-empty">No one has answered yet. Share your quiz link to see names and scores here.</p>}
+      </section>
       <div className="analytics-score"><div><span className="section-kicker">The score, when there is one</span><p>{analytics.data.averageScore == null ? 'This quiz doesn’t have a scored average yet.' : <><strong>{analytics.data.averageScore}%</strong> average score</>}</p></div><div className="score-flower"><Heart size={20} fill="currentColor" /></div></div>
       <div className="section-row"><div><span className="section-kicker">What people picked</span><h2 className="section-title">Question by question</h2></div><span className="response-private"><LockKeyhole size={14} /> Owner view</span></div>
       {analytics.data.questions.length ? <div className="answer-breakdown">{analytics.data.questions.map((question, i) => {
@@ -455,15 +489,16 @@ function ParticipantPage() {
     return { ...prev, [questionId]: multiple ? current.includes(optionId) ? current.filter((id) => id !== optionId) : [...current, optionId] : [optionId] };
   });
   const send = () => {
+    if (!nickname.trim()) { setError('Enter your name so your friend can see whose score this is.'); return; }
     if (quiz.questions.some((q) => q.type === 'short-answer' ? !shortAnswers[q.id]?.trim() : !(answers[q.id]?.length))) { setError('Answer each question before sending.'); return; }
-    const attempt: AttemptInput = { nickname: nickname.trim() || undefined, answers: quiz.questions.map((q) => ({ questionId: q.id, selectedOptionIds: answers[q.id] || [], ...(shortAnswers[q.id]?.trim() ? { shortAnswer: shortAnswers[q.id].trim() } : {}) })) };
+    const attempt: AttemptInput = { nickname: nickname.trim(), answers: quiz.questions.map((q) => ({ questionId: q.id, selectedOptionIds: answers[q.id] || [], ...(shortAnswers[q.id]?.trim() ? { shortAnswer: shortAnswers[q.id].trim() } : {}) })) };
     setError('');
     submit.mutate({ publicId: quiz.publicId, data: attempt }, { onSuccess: (value) => setResult(value), onError: () => setError('Your answers didn’t get through. Please try once more.') });
   };
-  return <ParticipantShell>{result ? <section className="participant-result"><div className="result-stamp"><Heart size={25} fill="currentColor" /></div><span className="section-kicker">Answers, honestly shared</span><h1>{result.resultVisible ? result.message || 'Your answers are part of the story.' : 'Thank you for answering.'}</h1>{result.resultVisible && result.scorePercent !== null && <div className="result-score"><strong>{result.scorePercent}%</strong><span>{result.correctCount} of {result.scoredCount} right</span></div>}<p>Thanks for taking <b>{quiz.title}</b>. Your answers are with the person who made it.</p>{quiz.allowRetake && <Button variant="outline" onClick={() => { setResult(null); setAnswers({}); setShortAnswers({}); }}>Take it again <ArrowRight size={15} /></Button>}<Link href="/explore" className="text-link">Find another quiz <ArrowUpRight size={15} /></Link></section> :
+  return <ParticipantShell>{result ? <section className="participant-result"><div className="result-stamp"><Heart size={25} fill="currentColor" /></div><span className="result-participant-name" data-testid="text-result-participant-name">Score for {nickname.trim()}</span><span className="section-kicker">Answers, honestly shared</span><h1>{result.resultVisible ? result.message || 'Your answers are part of the story.' : 'Thank you for answering.'}</h1>{result.resultVisible && result.scorePercent !== null && <div className="result-score"><strong>{result.scorePercent}%</strong><span>{result.correctCount} of {result.scoredCount} right</span></div>}<p>Thanks for taking <b>{quiz.title}</b>. Your answers are with the person who made it.</p>{quiz.allowRetake && <Button variant="outline" onClick={() => { setResult(null); setAnswers({}); setShortAnswers({}); }}>Take it again <ArrowRight size={15} /></Button>}<Link href="/explore" className="text-link">Find another quiz <ArrowUpRight size={15} /></Link></section> :
     <div className="participant-wrap"><header className="participant-top"><LogoLink /><span className="participant-note"><LockKeyhole size={13} /> Just between you and them</span></header><div className="participant-hero"><div className="section-kicker">{quiz.category || 'A quiz for you'}</div><h1>{quiz.title}</h1><p>{quiz.description}</p><span className="quiz-question-total">{quiz.questions.length} questions <span className="meta-dot" /> a few minutes</span></div>
     <section className="participant-questions">{quiz.questions.map((question, i) => <ParticipantQuestion key={question.id} question={question} index={i} selected={answers[question.id] || []} shortAnswer={shortAnswers[question.id] || ''} onSelect={(id) => setSelected(question.id, id, question.type === 'multiple-choice')} onShort={(value) => setShortAnswers((prev) => ({ ...prev, [question.id]: value }))} />)}</section>
-    <section className="submit-panel"><label className="field-label">What should they call you? <span className="optional-label">optional</span><input value={nickname} maxLength={40} placeholder="Your name or a nickname" onChange={(e) => setNickname(e.target.value)} data-testid="input-nickname" /></label>{error && <div className="inline-notice" role="alert">{error}</div>}<Button className="submit-answer" onClick={send} disabled={submit.isPending}>{submit.isPending ? 'Sending your answers…' : 'Send my answers'}{submit.isPending ? <LoaderCircle size={17} className="spin" /> : <ArrowRight size={17} />}</Button><small>Your answers are only shared with the person who made this quiz.</small></section>
+    <section className="submit-panel"><label className="field-label">Your name <span className="optional-label">required</span><input value={nickname} maxLength={40} autoComplete="nickname" placeholder="Name your friend will recognize" onChange={(e) => setNickname(e.target.value)} data-testid="input-nickname" /><small>This name appears next to your score in their results.</small></label>{error && <div className="inline-notice" role="alert">{error}</div>}<Button className="submit-answer" onClick={send} disabled={submit.isPending}>{submit.isPending ? 'Sending your answers…' : 'Send my answers'}{submit.isPending ? <LoaderCircle size={17} className="spin" /> : <ArrowRight size={17} />}</Button><small>Your answers are only shared with the person who made this quiz.</small></section>
     <footer className="participant-footer">{wordmark(true)} <span>Every answer tells a story.</span></footer></div>}
   </ParticipantShell>;
 }

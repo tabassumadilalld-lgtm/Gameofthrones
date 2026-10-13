@@ -471,12 +471,16 @@ components:
     AttemptInput:
       type: object
       properties:
-        nickname: { type: string, maxLength: 40 }
+        nickname:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: Name shown beside the participant's score to the quiz creator
         answers:
           type: array
           items:
             $ref: "#/components/schemas/SubmittedAnswer"
-      required: [answers]
+      required: [nickname, answers]
     AttemptResult:
       type: object
       properties:
@@ -502,6 +506,16 @@ components:
           items:
             $ref: "#/components/schemas/AnalyticsAnswer"
       required: [questionText, answers]
+    QuizSubmissionSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        participantName: { type: ["string", "null"] }
+        scorePercent: { type: ["number", "null"] }
+        correctCount: { type: integer }
+        scoredCount: { type: integer }
+        submittedAt: { type: string, format: date-time }
+      required: [id, participantName, scorePercent, correctCount, scoredCount, submittedAt]
     QuizAnalytics:
       type: object
       properties:
@@ -514,5 +528,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AnalyticsQuestion"
-      required: [views, attempts, completed, completionRate, averageScore, questions]
+        submissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizSubmissionSummary"
+      required: [views, attempts, completed, completionRate, averageScore, questions, submissions]
 

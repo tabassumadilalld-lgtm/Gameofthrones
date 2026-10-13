@@ -34,6 +34,7 @@ export * from './quizQuestion';
 export * from './quizQuestionNoButtonMode';
 export * from './quizQuestionType';
 export * from './quizStatus';
+export * from './quizSubmissionSummary';
 export * from './quizTemplate';
 export * from './quizVisibility';
 export * from './submittedAnswer';

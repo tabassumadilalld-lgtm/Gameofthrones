@@ -200,8 +200,12 @@ export interface SubmittedAnswer {
 }
 
 export interface AttemptInput {
-  /** @maxLength 40 */
-  nickname?: string;
+  /**
+     * Name shown beside the participant's score to the quiz creator
+     * @minLength 1
+     * @maxLength 40
+     */
+  nickname: string;
   answers: SubmittedAnswer[];
 }
 
@@ -225,6 +229,17 @@ export interface AnalyticsQuestion {
   answers: AnalyticsAnswer[];
 }
 
+export interface QuizSubmissionSummary {
+  id: number;
+  /** @nullable */
+  participantName: string | null;
+  /** @nullable */
+  scorePercent: number | null;
+  correctCount: number;
+  scoredCount: number;
+  submittedAt: string;
+}
+
 export interface QuizAnalytics {
   views: number;
   attempts: number;
@@ -233,6 +248,7 @@ export interface QuizAnalytics {
   /** @nullable */
   averageScore: number | null;
   questions: AnalyticsQuestion[];
+  submissions: QuizSubmissionSummary[];
 }
 
 /**

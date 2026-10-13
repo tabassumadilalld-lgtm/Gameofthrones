@@ -291,6 +291,14 @@ export const GetQuizAnalyticsResponse = zod.object({
   "optionText": zod.string(),
   "count": zod.number().int()
 }))
+})),
+  "submissions": zod.array(zod.object({
+  "id": zod.number().int(),
+  "participantName": zod.string().nullable(),
+  "scorePercent": zod.number().nullable(),
+  "correctCount": zod.number().int(),
+  "scoredCount": zod.number().int(),
+  "submittedAt": zod.coerce.date()
 }))
 })
 
@@ -391,7 +399,7 @@ export const submitQuizAttemptBodyNicknameMax = 40;
 
 
 export const SubmitQuizAttemptBody = zod.object({
-  "nickname": zod.string().max(submitQuizAttemptBodyNicknameMax).optional(),
+  "nickname": zod.string().min(1).max(submitQuizAttemptBodyNicknameMax).describe('Name shown beside the participant\'s score to the quiz creator'),
   "answers": zod.array(zod.object({
   "questionId": zod.string(),
   "selectedOptionIds": zod.array(zod.string()),

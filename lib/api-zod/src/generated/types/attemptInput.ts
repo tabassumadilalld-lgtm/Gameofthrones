@@ -8,7 +8,11 @@
 import type { SubmittedAnswer } from './submittedAnswer';
 
 export interface AttemptInput {
-  /** @maxLength 40 */
-  nickname?: string;
+  /**
+     * Name shown beside the participant's score to the quiz creator
+     * @minLength 1
+     * @maxLength 40
+     */
+  nickname: string;
   answers: SubmittedAnswer[];
 }
