@@ -25,6 +25,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 20_000, retry: 1 } } });
+let nextPublishedQuizId: number | null = null;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -290,6 +291,7 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
   const [initialized, setInitialized] = useState(false);
   const [notice, setNotice] = useState('');
   const [shareFeedback, setShareFeedback] = useState('');
+  const [publishSuccess, setPublishSuccess] = useState(false);
   useEffect(() => {
     if (editing && existing.data && !initialized) {
       const { title, description, category, visibility, status, resultVisibility, allowRetake, questions } = existing.data;
@@ -297,6 +299,12 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
       setInitialized(true);
     }
   }, [editing, existing.data, initialized]);
+  useEffect(() => {
+    if (editing && existing.data && nextPublishedQuizId === existing.data.id) {
+      setPublishSuccess(true);
+      nextPublishedQuizId = null;
+    }
+  }, [editing, existing.data]);
 
   const updateField = <K extends keyof QuizInput>(key: K, value: QuizInput[K]) => setForm((f) => ({ ...f, [key]: value }));
   const updateQuestion = (index: number, patch: Partial<QuizQuestion>) => setForm((f) => ({ ...f, questions: f.questions.map((q, i) => i === index ? { ...q, ...patch } : q) }));
@@ -304,7 +312,7 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
     const prepared: QuizInput = { ...form, title: form.title.trim(), description: form.description.trim(), status: publish ? 'published' : 'draft', questions: form.questions.map((q, i) => ({ ...q, position: i, text: q.text.trim(), options: q.options.map((o) => ({ ...o, text: o.text.trim() })) })) };
     if (!prepared.title) { setNotice('Give your quiz a title before saving.'); return; }
     if (prepared.questions.some((q) => !q.text || (q.type !== 'short-answer' && q.options.some((o) => !o.text)))) { setNotice('Finish each question and its answers before saving.'); return; }
-    const done = (quiz: Quiz) => { client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); if (editing) { client.invalidateQueries({ queryKey: getGetQuizQueryKey(quiz.id) }); client.invalidateQueries({ queryKey: getGetQuizAnalyticsQueryKey(quiz.id) }); } setLocation(`/quizzes/${quiz.id}`); };
+    const done = (quiz: Quiz) => { if (prepared.status === 'published') { if (editing) setPublishSuccess(true); else nextPublishedQuizId = quiz.id; } client.invalidateQueries({ queryKey: getListMyQuizzesQueryKey() }); client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }); if (editing) { client.invalidateQueries({ queryKey: getGetQuizQueryKey(quiz.id) }); client.invalidateQueries({ queryKey: getGetQuizAnalyticsQueryKey(quiz.id) }); } setLocation(`/quizzes/${quiz.id}`); };
     if (editing) update.mutate({ quizId, data: prepared }, { onSuccess: done, onError: () => setNotice('That change didn’t save. Please try again.') });
     else create.mutate({ data: prepared }, { onSuccess: done, onError: () => setNotice('That quiz didn’t save. Please try again.') });
   };
@@ -327,6 +335,7 @@ function QuizEditorPage({ editing }: { editing: boolean }) {
     <Link href={editing ? '/dashboard' : '/templates'} className="back-link"><ArrowLeft size={15} /> {editing ? 'All quizzes' : 'Browse templates'}</Link>
     <div className="editor-heading"><div><div className="section-kicker">{editing ? 'Make it yours' : 'A story in the making'}</div><h1 className="page-title">{editing ? 'Edit your quiz' : 'Start with a question.'}</h1><p className="page-subtitle">The best ones sound like you. The rest can come later.</p></div><span className="draft-pill"><span /> {form.status}</span></div>
     {editing && (publishedQuiz ? <section className="share-panel" aria-labelledby="share-panel-title">
+      {publishSuccess && <div className="publish-success" role="status" data-testid={`status-publish-success-${publishedQuiz.id}`}><CheckCircle2 size={20} /><strong>Your quiz has been published! Let’s see what scores your friends get.</strong><span>Share the link below.</span></div>}
       <div className="share-panel-copy"><span className="section-kicker">Ready for your people</span><h2 id="share-panel-title">Share your quiz link</h2><p>Send this link to friends. They answer here and see their own score after they submit.</p></div>
       <div className="share-link-row"><input aria-label="Participant quiz link" data-testid={`input-share-url-${publishedQuiz.id}`} value={shareUrl} readOnly onFocus={(event) => event.currentTarget.select()} /><Button variant="outline" onClick={copyPublishedLink} data-testid={`button-share-quiz-${publishedQuiz.id}`}><Copy size={15} /> Copy link</Button><a className="button button-primary share-open-button" href={`${basePath}/q/${publishedQuiz.publicId}`} target="_blank" rel="noreferrer" data-testid={`link-preview-quiz-${publishedQuiz.id}`}>Open link <ArrowUpRight size={15} /></a></div>
       <p className={`share-score-note ${!form.resultVisibility || !hasScoredQuestions ? 'share-score-warning' : ''}`} role="status" data-testid={`status-score-sharing-${publishedQuiz.id}`}>{!form.resultVisibility ? 'Scores are hidden right now. Turn on “Show results after answering” below to let people see their score.' : !hasScoredQuestions ? 'A numeric score is not set up yet. Mark a correct answer or add positive point values in your questions.' : 'Scores are enabled. Each person sees their own score immediately after submitting.'}</p>
